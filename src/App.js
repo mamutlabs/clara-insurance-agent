@@ -23,7 +23,7 @@ const TrainingModal = ({ isOpen, onClose, onSave }) => {
                 </div>
             </div>
         );
-    };
+};
 
 // --- Main App Component ---
 function App() {
@@ -36,9 +36,9 @@ function App() {
     const chatEndRef = useRef(null);
 
     const knowledgeBase = [
-        { id: 'auto_insurance', content: "El seguro de auto protege contra pérdidas financieras en caso de accidente o robo..." },
-        { id: 'home_insurance', content: "El seguro de hogar cubre tanto la estructura de la vivienda como las pertenencias personales..." },
-        { id: 'life_insurance', content: "El seguro de vida es un contrato que paga una suma de dinero a los beneficiarios..." }
+        { id: 'auto_insurance', keywords: ['auto', 'coche', 'vehículo'], content: "El seguro de auto protege contra pérdidas financieras en caso de accidente o robo. Las coberturas comunes incluyen responsabilidad civil, colisión, y completa." },
+        { id: 'home_insurance', keywords: ['hogar', 'casa', 'vivienda'], content: "El seguro de hogar cubre la estructura de la vivienda y las pertenencias personales contra desastres como incendios o robos." },
+        { id: 'life_insurance', keywords: ['vida', 'fallecimiento', 'beneficiarios'], content: "El seguro de vida es un contrato que paga una suma de dinero a los beneficiarios." }
     ];
 
     useEffect(() => {
@@ -53,38 +53,47 @@ function App() {
     }, [userDocuments]);
 
     const callGeminiAPI = async (prompt) => {
-        setIsLoading(true);
+        const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+        if (!apiKey) {
+            return "Error: La API Key no está configurada en Vercel. Por favor, añádela en los ajustes del proyecto.";
+        }
+
         try {
-            const response = await fetch('/api/gemini', {
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt })
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
 
             if (!response.ok) {
-              const errorBody = await response.text();
-              throw new Error(`Network response was not ok: ${response.status} ${errorBody}`);
+              const errorBody = await response.json();
+              console.error("API Error:", errorBody);
+              throw new Error(`Error de la API: ${errorBody.error.message}`);
             }
             const data = await response.json();
-            return data.text;
+            return data.candidates[0].content.parts[0].text;
         } catch (error) {
-            console.error("Error calling backend API:", error);
-            return "Lo siento, tuve un problema para conectarme con mis sistemas. Por favor, intenta de nuevo.";
-        } finally {
-            setIsLoading(false);
+            console.error("Error al llamar a la API de Gemini:", error);
+            return "Lo siento, tuve un problema para conectarme con mis sistemas. Por favor, revisa la consola del navegador para más detalles.";
         }
     };
 
     const submitQuery = async (queryText) => {
         const userMessage = queryText.trim();
         if (!userMessage) return;
+
+        setIsLoading(true);
         setMessages(prev => [...prev, { role: 'user', content: userMessage, id: Date.now() }]);
 
+        // Simple RAG logic
         const combinedKnowledge = [ ...knowledgeBase, ...userDocuments ];
         let finalPrompt = `Actuando como Clara, un agente experto en seguros de Corredores de seguros alba Cavagliano, responde la siguiente pregunta: "${userMessage}"`;
 
         const modelResponse = await callGeminiAPI(finalPrompt);
         setMessages(prev => [...prev, { role: 'model', content: modelResponse, id: Date.now() + 1 }]);
+        setIsLoading(false);
     };
 
     const handleFileChange = (e) => {
@@ -93,7 +102,7 @@ function App() {
         const reader = new FileReader();
         reader.onload = (event) => {
             setUserDocuments(prev => [...prev, { id: `user-doc-${Date.now()}`, name: file.name, content: event.target.result }]);
-            setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `Documento "${file.name}" cargado.`, id: Date.now() }]);
+            setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `Documento "${file.name}" cargado.` }]);
         };
         reader.readAsText(file);
         e.target.value = null;
@@ -102,7 +111,7 @@ function App() {
     const handleSaveTrainingText = (text) => {
         const newDoc = { id: `user-text-${Date.now()}`, name: `Info manual #${userDocuments.length + 1}`, content: text };
         setUserDocuments(prev => [...prev, newDoc]);
-        setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `Nuevo conocimiento de "${newDoc.name}" añadido.`, id: Date.now() }]);
+        setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `Nuevo conocimiento añadido.` }]);
     };
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
@@ -143,4 +152,3 @@ function App() {
     );
 }
 export default App;
-
