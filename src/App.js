@@ -22,8 +22,9 @@ const TrainingModal = ({ isOpen, onClose, onSave }) => {
                     <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500" disabled={!text.trim()}>Añadir</button>
                 </div>
             </div>
-        );
-};
+        </div>
+    );
+}
 
 // --- Main App Component ---
 function App() {
@@ -152,4 +153,3 @@ function App() {
     );
 }
 export default App;
-
