@@ -24,7 +24,7 @@ const TrainingModal = ({ isOpen, onClose, onSave }) => {
             </div>
         </div>
     );
-}
+};
 
 // --- Main App Component ---
 function App() {
@@ -125,8 +125,8 @@ function App() {
                     <div className="flex items-center gap-3"><ClaraLogo /><h1 className="text-xl font-semibold">Clara</h1></div>
                     <div className="flex items-center gap-2">
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".txt,.md" style={{ display: 'none' }} />
-                        <button onClick={() => fileInputRef.current.click()} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg hover:bg-gray-600/70 text-sm"><UploadIcon /> <span className="hidden md:inline">Subir Póliza</span></button>
-                        <button onClick={() => setIsTrainingModalOpen(true)} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg hover:bg-gray-600/70 text-sm"><TrainIcon /> <span className="hidden md:inline">Añadir Info</span></button>
+                        <button onClick={() => fileInputRef.current.click()} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg hover:bg-gray-600/70 text-sm"><UploadIcon /> <span className="hidden md:inline">Subir documentos</span></button>
+                        <button onClick={() => setIsTrainingModalOpen(true)} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg hover:bg-gray-600/70 text-sm"><TrainIcon /> <span className="hidden md:inline">Añadir Texto</span></button>
                     </div>
                 </div>
                  {userDocuments.length > 0 && (
