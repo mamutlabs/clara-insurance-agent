@@ -5,7 +5,8 @@ import { initializeApp } from "firebase/app";
 import { 
     getAuth, 
     onAuthStateChanged, 
-    signInWithEmailAndPassword, 
+    GoogleAuthProvider,
+    signInWithPopup,
     signOut 
 } from "firebase/auth";
 import { 
@@ -30,6 +31,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
 
 
 // --- Icon Components ---
@@ -38,9 +40,8 @@ const UserIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.o
 const SendIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m22 2-7 20-4-9-9-4Z" /><path d="m22 2-11 11" /></svg>);
 const UploadIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>);
 const TrainIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.37 2.63 14 7l-1.5-1.5L16.5 2l-3-3L12 3.5 8.5 0 7 1.5 11 6l-4.37 4.37"/><path d="M14 7l-1.5-1.5"/></svg>);
-const LoginIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>);
 const LogoutIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>);
-
+const GoogleIcon = () => (<svg className="w-4 h-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.3 512 0 398.8 0 261.8 0 127.2 97.5 14.7 225.4 3.4c18.3-1.6 34.6 12.1 34.6 31v58.5c0 15.3-11.5 27.9-26.8 29.8-38.9 4.7-69.3 38.2-69.3 78.3 0 42.8 33.7 77.5 75.5 77.5 42.1 0 76.5-35.1 76.5-78.2 0-20.2-7.6-38.4-20.2-52.5-12.7-14.2-29.3-22.4-47.5-22.4-19.6 0-37.8 9-50.2 23.6-11.9 14.1-18.4 31.9-18.4 51.1 0 16.9 13.8 30.7 30.7 30.7H442.2c16.9 0 30.7-13.8 30.7-30.7 0-14.8-10.5-27.4-24.6-30.1-16.7-3.2-34.1-5.4-52.6-5.4-38.1 0-73.4 15.2-98.6 39.9-24.8 24.3-39.7 57.8-39.7 94.2 0 66.4 54.1 120.5 120.5 120.5 66.4 0 120.5-54.1 120.5-120.5 0-21.7-5.7-42-16.1-59.5-10.4-17.5-24.6-32.3-41.3-43.5-16.9-11.2-36.2-18.7-56.4-22.3-22.8-4-46.7-2.9-69.3 3.4-12.7 3.5-22.5 14.8-22.5 28.1v60.9c0 19.3 15.6 34.9 34.9 34.9 10.3 0 20-4.2 26.8-11.1 13.5-13.8 21.1-31.9 21.1-51.1 0-35.3-28.7-64-64-64-35.3 0-64 28.7-64 64 0 35.3 28.7 64 64 64 35.3 0 64-28.7 64-64 0-16.9-13.8-30.7-30.7-30.7H189.4c-16.9 0-30.7 13.8-30.7 30.7 0 16.9 13.8 30.7 30.7 30.7h252.8c16.9 0 30.7-13.8 30.7-30.7z"></path></svg>);
 
 // --- Training Modal Component ---
 const TrainingModal = ({ isOpen, onClose, onSave }) => {
@@ -61,44 +62,6 @@ const TrainingModal = ({ isOpen, onClose, onSave }) => {
     );
 };
 
-// --- Login Modal Component ---
-const LoginModal = ({ isOpen, onClose, onLogin }) => {
-    if (!isOpen) return null;
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setError('');
-        try {
-            await onLogin(email, password);
-            onClose();
-        } catch (err) {
-            setError('Error en el inicio de sesión. Verifica tus credenciales.');
-            console.error(err);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={onClose}>
-            <form onSubmit={handleLogin} className="bg-[#1e1f20] rounded-xl shadow-lg p-8 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
-                <h2 className="text-2xl font-bold text-center text-white mb-6">Acceso Administrador</h2>
-                {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
-                <div className="mb-4">
-                    <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="email">Correo Electrónico</label>
-                    <input type="email" id="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#131314] rounded-lg p-3 text-base text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50" required />
-                </div>
-                <div className="mb-6">
-                    <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="password">Contraseña</label>
-                    <input type="password" id="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#131314] rounded-lg p-3 text-base text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50" required />
-                </div>
-                <button type="submit" className="w-full py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors">Iniciar Sesión</button>
-            </form>
-        </div>
-    );
-};
-
 
 // --- Main App Component ---
 function App() {
@@ -108,7 +71,6 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [userDocuments, setUserDocuments] = useState([]);
     const [isTrainingModalOpen, setIsTrainingModalOpen] = useState(false);
-    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const fileInputRef = useRef(null);
     const chatEndRef = useRef(null);
 
@@ -133,8 +95,12 @@ function App() {
         return () => unsubscribe();
     }, []);
 
-    const handleLogin = (email, password) => {
-        return signInWithEmailAndPassword(auth, email, password);
+    const handleGoogleLogin = async () => {
+        try {
+            await signInWithPopup(auth, googleProvider);
+        } catch (error) {
+            console.error("Error durante el inicio de sesión con Google:", error);
+        }
     };
 
     const handleLogout = () => {
@@ -144,83 +110,53 @@ function App() {
     const callGeminiAPI = async (prompt) => {
         const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-        if (!apiKey) {
-            return "Error: La API Key no está configurada en Vercel.";
-        }
+        if (!apiKey) return "Error: La API Key no está configurada en Vercel.";
         
         try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
             if (!response.ok) {
-              const errorBody = await response.json();
-              throw new Error(`Error de la API: ${errorBody.error.message}`);
+              const errorBody = await response.json(); throw new Error(`Error de la API: ${errorBody.error.message}`);
             }
-            const data = await response.json();
-            return data.candidates[0].content.parts[0].text;
+            const data = await response.json(); return data.candidates[0].content.parts[0].text;
         } catch (error) {
-            console.error("Error al llamar a la API de Gemini:", error);
-            return "Lo siento, tuve un problema para conectarme con mis sistemas.";
+            console.error("Error al llamar a la API de Gemini:", error); return "Lo siento, tuve un problema para conectarme con mis sistemas.";
         }
     };
     
     const submitQuery = async (queryText) => {
         const userMessage = queryText.trim();
         if (!userMessage) return;
-    
         setIsLoading(true);
         setMessages(prev => [...prev, { role: 'user', content: userMessage, id: Date.now() }]);
-        
-        const combinedKnowledge = [...userDocuments]; // Now using docs from Firestore
+        const combinedKnowledge = [...userDocuments];
         let finalPrompt = `Actuando como Clara, un agente experto en seguros de Corredores de seguros alba Cavagliano, responde la siguiente pregunta: "${userMessage}"`;
-        
-        // Simple RAG logic (can be improved)
         const queryWords = queryText.toLowerCase().split(/\s+/);
         let bestMatch = null;
         let maxScore = 0;
-
         combinedKnowledge.forEach(doc => {
             let score = 0;
             const contentLower = doc.content.toLowerCase();
-            queryWords.forEach(word => {
-                if (contentLower.includes(word)) {
-                    score++;
-                }
-            });
-            if (score > maxScore) {
-                maxScore = score;
-                bestMatch = doc;
-            }
+            queryWords.forEach(word => { if (contentLower.includes(word)) score++; });
+            if (score > maxScore) { maxScore = score; bestMatch = doc; }
         });
-
         if (bestMatch) {
              finalPrompt = `Actuando como Clara, un agente experto en seguros de Corredores de seguros alba Cavagliano, y basándote en el siguiente contexto, responde la pregunta.\n\nContexto: "${bestMatch.content}"\n\nPregunta: "${userMessage}"`;
         }
-    
         const modelResponse = await callGeminiAPI(finalPrompt);
         setMessages(prev => [...prev, { role: 'model', content: modelResponse, id: Date.now() + 1 }]);
         setIsLoading(false);
     };
     
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = async (event) => {
-            const newDoc = {
-                name: file.name,
-                content: event.target.result,
-                addedBy: user?.email || 'unknown',
-                timestamp: new Date()
-            };
+            const newDoc = { name: file.name, content: event.target.result, addedBy: user?.email || 'unknown', timestamp: new Date() };
             try {
                 await addDoc(collection(db, "knowledge"), newDoc);
                 setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `Documento "${file.name}" añadido a la base de conocimiento.` }]);
             } catch (err) {
-                console.error("Error adding document: ", err);
                 setMessages(prev => [...prev, { role: 'system', isSuccess: false, content: `Error al añadir el documento.` }]);
             }
         };
@@ -229,52 +165,35 @@ function App() {
     };
         
     const handleSaveTrainingText = async (text) => {
-        const newDoc = {
-            name: `Info manual - ${new Date().toLocaleString()}`,
-            content: text,
-            addedBy: user?.email || 'unknown',
-            timestamp: new Date()
-        };
+        const newDoc = { name: `Info manual - ${new Date().toLocaleString()}`, content: text, addedBy: user?.email || 'unknown', timestamp: new Date() };
         try {
             await addDoc(collection(db, "knowledge"), newDoc);
             setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `Nuevo conocimiento añadido.` }]);
         } catch (err) {
-            console.error("Error adding document: ", err);
              setMessages(prev => [...prev, { role: 'system', isSuccess: false, content: `Error al añadir conocimiento.` }]);
         }
     };
     
-
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
 
     return (
         <div className="bg-[#131314] text-white font-sans w-full h-screen flex flex-col antialiased">
             <TrainingModal isOpen={isTrainingModalOpen} onClose={() => setIsTrainingModalOpen(false)} onSave={handleSaveTrainingText} />
-            <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
-
             <header className="p-4 border-b border-gray-700/50 flex-shrink-0">
                 <div className="max-w-3xl mx-auto flex justify-between items-center gap-4">
-                    <div className="flex items-center gap-3">
-                        <ClaraLogo />
-                        <h1 className="text-2xl font-semibold">Clara</h1>
-                    </div>
-                    
+                    <div className="flex items-center gap-3"><ClaraLogo /><h1 className="text-2xl font-semibold">Clara</h1></div>
                     {user ? (
                         <div className="flex items-center gap-4">
                             <span className="text-sm text-gray-400 hidden sm:inline">{user.email}</span>
-                            <button onClick={handleLogout} className="flex items-center gap-2 bg-red-800/50 px-3 py-2 rounded-lg hover:bg-red-700/70 text-sm text-red-300">
-                                <LogoutIcon />
-                                <span className="hidden md:inline">Salir</span>
-                            </button>
+                            <button onClick={handleLogout} className="flex items-center gap-2 bg-red-800/50 px-3 py-2 rounded-lg hover:bg-red-700/70 text-sm text-red-300"><LogoutIcon /> <span className="hidden md:inline">Salir</span></button>
                         </div>
                     ) : (
-                        <button onClick={() => setIsLoginModalOpen(true)} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg hover:bg-gray-600/70 text-sm">
-                            <LoginIcon />
-                            <span className="hidden md:inline">Acceso Admin</span>
+                        <button onClick={handleGoogleLogin} className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 text-sm">
+                            <GoogleIcon />
+                            <span>Iniciar sesión con Google</span>
                         </button>
                     )}
                 </div>
-                
                  {user && (
                     <div className="max-w-3xl mx-auto mt-4">
                          <div className="flex items-center gap-2">
@@ -286,9 +205,7 @@ function App() {
                          {userDocuments.length > 0 && (
                              <div className="mt-4">
                                 <p className="text-xs text-gray-400 mb-2">Conocimiento en la Base de Datos ({userDocuments.length}):</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {userDocuments.map(doc => (<span key={doc.id} className="text-xs bg-blue-900/50 text-blue-300 px-2 py-1 rounded-md" title={doc.content}>{doc.name}</span>))}
-                                </div>
+                                <div className="flex flex-wrap gap-2">{userDocuments.map(doc => (<span key={doc.id} className="text-xs bg-blue-900/50 text-blue-300 px-2 py-1 rounded-md" title={doc.content}>{doc.name}</span>))}</div>
                             </div>
                         )}
                     </div>
@@ -317,4 +234,3 @@ function App() {
     );
 }
 export default App;
-
