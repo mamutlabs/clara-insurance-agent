@@ -1,7 +1,3 @@
-// ========================================================================
-// ARCHIVO 2: src/App.js
-// Reemplaza el contenido de tu archivo src/App.js con esto.
-// ========================================================================
 import React, { useState, useRef, useEffect } from 'react';
 
 // Firebase Imports
