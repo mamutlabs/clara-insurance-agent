@@ -6,6 +6,7 @@
     "@tailwindcss/typography": "^0.5.13",
     "autoprefixer": "^10.4.19",
     "firebase": "^10.12.2",
+    "pdfjs-dist": "^4.4.168",
     "postcss": "^8.4.38",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
