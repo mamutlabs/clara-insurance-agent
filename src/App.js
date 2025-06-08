@@ -53,8 +53,6 @@ const TrainingModal = ({ isOpen, onClose, onSave }) => {
         </div>
     );
 };
-
-// --- Main App Component ---
 function App() {
     const [user, setUser] = useState(null);
     const [messages, setMessages] = useState([{ role: 'model', content: 'Hola, soy Clara. He sido actualizada con una memoria conversacional mejorada. Sube un documento o hazme una pregunta.', id: 'initial-message' }]);
@@ -62,7 +60,7 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [userDocuments, setUserDocuments] = useState([]);
     const [isTrainingModalOpen, setIsTrainingModalOpen] = useState(false);
-    const [lastUploadedDocId, setLastUploadedDocId] = useState(null);
+    const [activeContext, setActiveContext] = useState(null);
 
     const fileInputRef = useRef(null);
     const chatEndRef = useRef(null);
@@ -84,7 +82,7 @@ function App() {
         try {
             await signInWithPopup(auth, googleProvider);
         } catch (error) {
-            console.error("Error durante el inicio de sesión con Google:", error);
+            console.error("Error during Google login:", error);
         }
     };
 
@@ -117,36 +115,19 @@ function App() {
         setIsLoading(true);
         const currentMessages = [...messages, { role: 'user', content: userMessage, id: Date.now() }];
         setMessages(currentMessages);
-
-        const combinedKnowledge = [...userDocuments];
-        let bestMatch = null;
-        let maxScore = 0;
-
-        combinedKnowledge.forEach(doc => {
-            let score = 0;
-            const contentLower = doc.content.toLowerCase();
-            const queryWords = queryText.toLowerCase().split(/\s+/);
-            queryWords.forEach(word => {
-                if (contentLower.includes(word)) score++;
-            });
-            if (doc.id === lastUploadedDocId) {
-                score += 10;
-            }
-            if (score > maxScore) {
-                maxScore = score;
-                bestMatch = doc;
-            }
-        });
-
+        
         const conversationHistory = currentMessages.slice(-6).map(msg => `${msg.role === 'user' ? 'Usuario' : 'Clara'}: ${msg.content}`).join('\n');
 
         let finalPrompt;
-        if (bestMatch) {
-            finalPrompt = `Como una experta en seguros llamada Clara, analiza el historial de la conversación y el contexto proporcionado para responder la última pregunta del usuario. Tu respuesta debe ser precisa y basarse únicamente en el contexto si es relevante.\n\n[HISTORIAL DE LA CONVERSACIÓN]\n${conversationHistory}\n\n[CONTEXTO RELEVANTE DEL DOCUMENTO: ${bestMatch.name}]\n"""${bestMatch.content}"""\n\n[PREGUNTA FINAL DEL USUARIO]\n${userMessage}`;
+        if (activeContext) {
+            console.log("Using ACTIVE document context for prompt:", activeContext.name);
+            finalPrompt = `Eres Clara, una experta en seguros de Corredores de seguros alba Cavagliano. Tu única fuente de verdad para responder es el siguiente CONTEXTO. No uses ningún conocimiento externo. Si la respuesta no está en el texto, indícalo claramente. \n\n[CONTEXTO DEL DOCUMENTO: ${activeContext.name}]\n"""${activeContext.content}"""\n\n[PREGUNTA DEL USUARIO]\n${userMessage}`;
+            setActiveContext(null); // Clear context after first use
         } else {
-            finalPrompt = `Como una experta en seguros llamada Clara, analiza el historial de la conversación para responder la última pregunta del usuario. Si no tienes información, indícalo amablemente.\n\n[HISTORIAL DE LA CONVERSACIÓN]\n${conversationHistory}\n\n[PREGUNTA FINAL DEL USUARIO]\n${userMessage}`;
+            console.log("No active context. Searching general knowledge base.");
+            finalPrompt = `Eres Clara, una experta en seguros de Corredores de seguros alba Cavagliano. Analiza el historial de la conversación y usa tu conocimiento general para responder la pregunta del usuario. \n\n[HISTORIAL DE LA CONVERSACIÓN]\n${conversationHistory}\n\n[PREGUNTA FINAL DEL USUARIO]\n${userMessage}`;
         }
-
+        
         const modelResponse = await callGeminiAPI(finalPrompt);
         setMessages(prev => [...prev, { role: 'model', content: modelResponse, id: Date.now() + 1 }]);
         setIsLoading(false);
@@ -189,8 +170,8 @@ function App() {
         const newDoc = { name, content, addedBy: user?.email || 'unknown', timestamp: new Date() };
         try {
             const docRef = await addDoc(collection(db, "knowledge"), newDoc);
-            setLastUploadedDocId(docRef.id);
-            setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `He leído y memorizado el documento "${name}". Ya puedes hacerme preguntas sobre su contenido.` }]);
+            setActiveContext({ ...newDoc, id: docRef.id });
+            setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `He leído y memorizado el documento "${name}". Estoy lista para responder preguntas sobre él.` }]);
         } catch (err) {
             setMessages(prev => [...prev, { role: 'system', isSuccess: false, content: `Error al añadir el documento.` }]);
         }
