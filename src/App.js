@@ -8,6 +8,13 @@ import {
     signInWithEmailAndPassword, 
     signOut 
 } from "firebase/auth";
+import { 
+    getFirestore,
+    collection,
+    addDoc,
+    onSnapshot,
+    query
+} from "firebase/firestore";
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -22,6 +29,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 
 // --- Icon Components ---
@@ -112,6 +120,19 @@ function App() {
         return () => unsubscribe();
     }, []);
 
+    // Firestore Listener
+    useEffect(() => {
+        const q = query(collection(db, "knowledge"));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const docsFromDb = [];
+            querySnapshot.forEach((doc) => {
+                docsFromDb.push({ ...doc.data(), id: doc.id });
+            });
+            setUserDocuments(docsFromDb);
+        });
+        return () => unsubscribe();
+    }, []);
+
     const handleLogin = (email, password) => {
         return signInWithEmailAndPassword(auth, email, password);
     };
@@ -120,11 +141,115 @@ function App() {
         signOut(auth);
     };
 
-    // ... other state and logic ...
+    const callGeminiAPI = async (prompt) => {
+        const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+        if (!apiKey) {
+            return "Error: La API Key no está configurada en Vercel.";
+        }
+        
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            if (!response.ok) {
+              const errorBody = await response.json();
+              throw new Error(`Error de la API: ${errorBody.error.message}`);
+            }
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        } catch (error) {
+            console.error("Error al llamar a la API de Gemini:", error);
+            return "Lo siento, tuve un problema para conectarme con mis sistemas.";
+        }
+    };
+    
+    const submitQuery = async (queryText) => {
+        const userMessage = queryText.trim();
+        if (!userMessage) return;
+    
+        setIsLoading(true);
+        setMessages(prev => [...prev, { role: 'user', content: userMessage, id: Date.now() }]);
+        
+        const combinedKnowledge = [...userDocuments]; // Now using docs from Firestore
+        let finalPrompt = `Actuando como Clara, un agente experto en seguros de Corredores de seguros alba Cavagliano, responde la siguiente pregunta: "${userMessage}"`;
+        
+        // Simple RAG logic (can be improved)
+        const queryWords = queryText.toLowerCase().split(/\s+/);
+        let bestMatch = null;
+        let maxScore = 0;
+
+        combinedKnowledge.forEach(doc => {
+            let score = 0;
+            const contentLower = doc.content.toLowerCase();
+            queryWords.forEach(word => {
+                if (contentLower.includes(word)) {
+                    score++;
+                }
+            });
+            if (score > maxScore) {
+                maxScore = score;
+                bestMatch = doc;
+            }
+        });
+
+        if (bestMatch) {
+             finalPrompt = `Actuando como Clara, un agente experto en seguros de Corredores de seguros alba Cavagliano, y basándote en el siguiente contexto, responde la pregunta.\n\nContexto: "${bestMatch.content}"\n\nPregunta: "${userMessage}"`;
+        }
+    
+        const modelResponse = await callGeminiAPI(finalPrompt);
+        setMessages(prev => [...prev, { role: 'model', content: modelResponse, id: Date.now() + 1 }]);
+        setIsLoading(false);
+    };
+    
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const newDoc = {
+                name: file.name,
+                content: event.target.result,
+                addedBy: user?.email || 'unknown',
+                timestamp: new Date()
+            };
+            try {
+                await addDoc(collection(db, "knowledge"), newDoc);
+                setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `Documento "${file.name}" añadido a la base de conocimiento.` }]);
+            } catch (err) {
+                console.error("Error adding document: ", err);
+                setMessages(prev => [...prev, { role: 'system', isSuccess: false, content: `Error al añadir el documento.` }]);
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = null;
+    };
+        
+    const handleSaveTrainingText = async (text) => {
+        const newDoc = {
+            name: `Info manual - ${new Date().toLocaleString()}`,
+            content: text,
+            addedBy: user?.email || 'unknown',
+            timestamp: new Date()
+        };
+        try {
+            await addDoc(collection(db, "knowledge"), newDoc);
+            setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `Nuevo conocimiento añadido.` }]);
+        } catch (err) {
+            console.error("Error adding document: ", err);
+             setMessages(prev => [...prev, { role: 'system', isSuccess: false, content: `Error al añadir conocimiento.` }]);
+        }
+    };
+    
+
+    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
 
     return (
         <div className="bg-[#131314] text-white font-sans w-full h-screen flex flex-col antialiased">
-            <TrainingModal isOpen={isTrainingModalOpen} onClose={() => setIsTrainingModalOpen(false)} onSave={() => {}} />
+            <TrainingModal isOpen={isTrainingModalOpen} onClose={() => setIsTrainingModalOpen(false)} onSave={handleSaveTrainingText} />
             <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} onLogin={handleLogin} />
 
             <header className="p-4 border-b border-gray-700/50 flex-shrink-0">
@@ -148,24 +273,44 @@ function App() {
                 </div>
                 
                  {user && (
-                    <div className="max-w-3xl mx-auto mt-4 flex items-center gap-2">
-                        <p className="text-xs text-gray-400">Panel de Administrador:</p>
-                        <button onClick={() => fileInputRef.current.click()} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg hover:bg-gray-600/70 text-sm"><UploadIcon /> <span className="hidden md:inline">Subir documentos</span></button>
-                        <button onClick={() => setIsTrainingModalOpen(true)} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg hover:bg-gray-600/70 text-sm"><TrainIcon /> <span className="hidden md:inline">Añadir Texto</span></button>
-                        <input type="file" ref={fileInputRef} style={{ display: 'none' }} />
+                    <div className="max-w-3xl mx-auto mt-4">
+                         <div className="flex items-center gap-2">
+                             <p className="text-xs text-gray-400">Panel de Administrador:</p>
+                             <button onClick={() => fileInputRef.current.click()} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg hover:bg-gray-600/70 text-sm"><UploadIcon /> <span className="hidden md:inline">Subir documentos</span></button>
+                             <button onClick={() => setIsTrainingModalOpen(true)} className="flex items-center gap-2 bg-gray-700/50 px-3 py-2 rounded-lg hover:bg-gray-600/70 text-sm"><TrainIcon /> <span className="hidden md:inline">Añadir Texto</span></button>
+                             <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
+                         </div>
+                         {userDocuments.length > 0 && (
+                             <div className="mt-4">
+                                <p className="text-xs text-gray-400 mb-2">Conocimiento en la Base de Datos ({userDocuments.length}):</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {userDocuments.map(doc => (<span key={doc.id} className="text-xs bg-blue-900/50 text-blue-300 px-2 py-1 rounded-md" title={doc.content}>{doc.name}</span>))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </header>
             
             <main className="flex-1 overflow-y-auto p-4 md:p-6">
-                {/* Chat UI will go here */}
+                 <div className="max-w-3xl mx-auto">{messages.map((msg, index) => (
+                    <div key={msg.id || index} className={`mb-6 ${msg.role === 'system' ? 'text-center' : ''}`}>
+                        {msg.role === 'system' ? (<div className={`text-sm ${msg.isSuccess ? 'text-green-400 bg-green-900/30' : 'text-red-400 bg-red-900/30'} inline-block px-3 py-1 rounded-full`}>{msg.content}</div>) : (
+                            <div className="flex items-start gap-4">
+                                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-700/60 flex items-center justify-center mt-1">{msg.role === 'user' ? <UserIcon /> : <ClaraLogo />}</div>
+                                <div className="flex-1"><p className="font-bold mb-2 capitalize text-gray-200">{msg.role === 'user' ? 'Tú' : 'Clara'}</p><div className="prose prose-invert prose-p:text-gray-300 text-base whitespace-pre-wrap">{msg.content}</div></div>
+                            </div>
+                        )}
+                    </div>
+                ))}
+                {isLoading && ( <div className="mb-6 flex items-start gap-4"> <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-700/60 flex items-center justify-center mt-1"> <ClaraLogo /> </div> <div className="flex-1 pt-2"> <div className="flex items-center gap-2"> <div className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-pulse [animation-delay:-0.3s]"></div> <div className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-pulse [animation-delay:-0.15s]"></div> <div className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-pulse"></div> </div> </div> </div> )}
+                <div ref={chatEndRef} /></div>
             </main>
             
              <footer className="p-4 md:p-6 flex-shrink-0">
-                <div className="max-w-3xl mx-auto"><form className="relative"><textarea placeholder="Pregúntame sobre tu póliza..." rows="1" className="w-full bg-[#1e1f20] rounded-2xl py-3 pr-16 pl-6 text-base text-gray-200 placeholder-gray-500 focus:outline-none" /><button type="submit" disabled className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-gray-600"><SendIcon /></button></form></div>
+                <div className="max-w-3xl mx-auto"><form onSubmit={(e) => { e.preventDefault(); submitQuery(inputValue); setInputValue(''); }} className="relative"><textarea value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuery(inputValue); setInputValue(''); } }} placeholder="Pregúntame sobre tu póliza..." rows="1" className="w-full bg-[#1e1f20] rounded-2xl py-3 pr-16 pl-6 text-base text-gray-200 placeholder-gray-500 focus:outline-none" /><button type="submit" disabled={!inputValue.trim() || isLoading} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600"><SendIcon /></button></form></div>
             </footer>
         </div>
     );
 }
 export default App;
-
