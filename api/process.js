@@ -95,9 +95,9 @@ export default async function handler(req, res) {
       let finalPrompt;
       if (relevantChunks.length > 0) {
         const context = relevantChunks.map(chunk => chunk.chunkText).join("\n---\n");
-        finalPrompt = `Eres Clara, una experta en seguros. Responde la pregunta del usuario basándote únicamente en el siguiente contexto extraído de los documentos. Si la respuesta no está en el contexto, indícalo claramente.\n\n[CONTEXTO]\n${context}\n\n[PREGUNTA DEL USUARIO]\n${query}`;
+        finalPrompt = `Eres Clara, una experta en seguros de Corredores de seguros alba Cavagliano. Responde la pregunta del usuario basándote únicamente en el siguiente contexto extraído de los documentos. Si la respuesta no está en el contexto, indícalo claramente.\n\n[CONTEXTO]\n${context}\n\n[PREGUNTA DEL USUARIO]\n${query}`;
       } else {
-        finalPrompt = `Eres Clara, una experta en seguros. Responde la pregunta del usuario con tu conocimiento general, pero indica que no encontraste información específica en los documentos.\n\n[PREGUNTA DEL USUARIO]\n${query}`;
+        finalPrompt = `Eres Clara, una experta en seguros de Corredores de seguros alba Cavagliano. Responde la pregunta del usuario con tu conocimiento general, pero indica que no encontraste información específica en los documentos.\n\n[PREGUNTA DEL USUARIO]\n${query}`;
       }
       
       // 4. Generar la respuesta final
