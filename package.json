@@ -1,31 +1,29 @@
 {
-  "name": "clara-agent",
+  "name": "clara-frontend",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@tailwindcss/typography": "^0.5.13",
-    "autoprefixer": "^10.4.19",
     "firebase": "^10.12.2",
     "pdfjs-dist": "^4.4.168",
-    "postcss": "^8.4.38",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
-    "tailwindcss": "^3.4.1"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build"
   },
+  "eslintConfig": {
+    "extends": [ "react-app" ]
+  },
   "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version"
-    ]
+    "production": [ ">0.2%", "not dead", "not op_mini all" ],
+    "development": [ "last 1 chrome version", "last 1 firefox version" ]
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.13",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4"
   }
 }
