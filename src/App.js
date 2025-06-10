@@ -18,7 +18,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- Icon Components ---
+// --- Icon Components (sin cambios) ---
 const ClaraLogo = () => (<svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"><path d="M12 2L4 5v6c0 5.55 3.58 10.43 8 11.92c4.42-1.49 8-6.37 8-11.92V5l-8-3z" fill="url(#logo-gradient)" /><text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" dy=".3em">C</text><defs><linearGradient id="logo-gradient" x1="12" y1="2" x2="12" y2="23" gradientUnits="userSpaceOnUse"><stop stopColor="#4f46e5"/><stop offset="1" stopColor="#3b82f6"/></linearGradient></defs></svg>);
 const UserIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>);
 const SendIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m22 2-7 20-4-9-9-4Z" /><path d="m22 2-11 11" /></svg>);
@@ -42,10 +42,13 @@ function App() {
     const callApi = async (action, payload) => {
         setIsLoading(true);
         try {
-            // No idToken needed for this simplified architecture, but keeping the structure
+            const idToken = user ? await user.getIdToken() : null;
             const response = await fetch('/api/process', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}` // Pass token for backend validation
+                },
                 body: JSON.stringify({ action, payload })
             });
             if (!response.ok) {
@@ -77,7 +80,10 @@ function App() {
     
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
-        if (!file || !user) return;
+        if (!file || !user) {
+            if(!user) alert("Por favor, inicia sesión para subir documentos.");
+            return;
+        };
         
         setMessages(prev => [...prev, { role: 'system', isSuccess: true, content: `Procesando ${file.name}... Esto puede tardar.` }]);
         
@@ -152,3 +158,4 @@ function App() {
     );
 }
 export default App;
+
