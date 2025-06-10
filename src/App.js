@@ -170,37 +170,3 @@ function App() {
     );
 }
 export default App;
-```javascript
-// ========================================================================
-// ARCHIVO 3: package.json
-// Reemplaza el contenido de tu archivo package.json principal con esto.
-// ========================================================================
-{
-  "name": "clara-frontend",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "firebase": "^10.12.2",
-    "pdfjs-dist": "^4.4.168",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-scripts": "5.0.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build"
-  },
-  "eslintConfig": {
-    "extends": [ "react-app" ]
-  },
-  "browserslist": {
-    "production": [ ">0.2%", "not dead", "not op_mini all" ],
-    "development": [ "last 1 chrome version", "last 1 firefox version" ]
-  },
-  "devDependencies": {
-    "@tailwindcss/typography": "^0.5.13",
-    "autoprefixer": "^10.4.19",
-    "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.4"
-  }
-}
