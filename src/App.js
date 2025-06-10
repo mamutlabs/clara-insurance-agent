@@ -18,7 +18,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- Icon Components (sin cambios) ---
+// --- Icon Components ---
 const ClaraLogo = () => (<svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"><path d="M12 2L4 5v6c0 5.55 3.58 10.43 8 11.92c4.42-1.49 8-6.37 8-11.92V5l-8-3z" fill="url(#logo-gradient)" /><text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" dy=".3em">C</text><defs><linearGradient id="logo-gradient" x1="12" y1="2" x2="12" y2="23" gradientUnits="userSpaceOnUse"><stop stopColor="#4f46e5"/><stop offset="1" stopColor="#3b82f6"/></linearGradient></defs></svg>);
 const UserIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>);
 const SendIcon = () => (<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m22 2-7 20-4-9-9-4Z" /><path d="m22 2-11 11" /></svg>);
@@ -42,13 +42,10 @@ function App() {
     const callApi = async (action, payload) => {
         setIsLoading(true);
         try {
-            const idToken = await user.getIdToken();
+            // No idToken needed for this simplified architecture, but keeping the structure
             const response = await fetch('/api/process', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action, payload })
             });
             if (!response.ok) {
@@ -65,32 +62,17 @@ function App() {
         }
     };
     
-    // Full RAG Query Logic
     const submitQuery = async (queryText) => {
         const userMessage = queryText.trim();
         if (!userMessage) return;
         
         setMessages(prev => [...prev, { role: 'user', content: userMessage, id: Date.now() }]);
         
-        const findResult = await callApi('findKnowledge', { query: userMessage });
-        if (!findResult) return;
+        const result = await callApi('queryRAG', { query: userMessage });
         
-        const { relevantChunks } = findResult;
-        let finalPrompt;
-        
-        if (relevantChunks && relevantChunks.length > 0) {
-            const context = relevantChunks.map(c => c.text).join("\n---\n");
-            finalPrompt = `Eres Clara, una experta en seguros. Responde la pregunta del usuario basándote únicamente en el siguiente contexto extraído de los documentos. Si la respuesta no está en el contexto, indícalo claramente.\n\n[CONTEXTO]\n${context}\n\n[PREGUNTA DEL USUARIO]\n${userMessage}`;
-        } else {
-            finalPrompt = `Eres Clara, una experta en seguros. Responde la pregunta del usuario, pero indica que no encontraste información específica sobre eso en la base de conocimiento.\n\n[PREGUNTA DEL USUARIO]\n${userMessage}`;
+        if (result && result.answer) {
+            setMessages(prev => [...prev, { role: 'model', content: result.answer, id: Date.now() + 1 }]);
         }
-        
-        const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(finalPrompt);
-        const response = await result.response;
-        
-        setMessages(prev => [...prev, { role: 'model', content: response.text(), id: Date.now() + 1 }]);
     };
     
     const handleFileChange = async (e) => {
@@ -128,10 +110,10 @@ function App() {
                     {user ? (
                         <div className="flex items-center gap-4">
                             <span className="text-sm text-gray-400 hidden sm:inline">{user.email}</span>
-                            <button onClick={handleLogout} className="flex items-center gap-2 bg-red-800/50 px-3 py-2 rounded-lg hover:bg-red-700/70 text-sm text-red-300"><LogoutIcon /> <span className="hidden md:inline">Salir</span></button>
+                            <button onClick={() => signOut(auth)} className="flex items-center gap-2 bg-red-800/50 px-3 py-2 rounded-lg hover:bg-red-700/70 text-sm text-red-300"><LogoutIcon /> <span className="hidden md:inline">Salir</span></button>
                         </div>
                     ) : (
-                        <button onClick={handleGoogleLogin} className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 text-sm">
+                        <button onClick={() => signInWithPopup(auth, googleProvider)} className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 text-sm">
                             <GoogleIcon />
                             <span>Iniciar sesión con Google</span>
                         </button>
